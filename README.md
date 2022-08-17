@@ -1,3 +1,5 @@
+Note: Only for fixes and pull requests - See original project.
+
 # strimzi-registry-operator
 
 A Kubernetes Operator for running the [Confluent Schema Registry](https://docs.confluent.io/current/schema-registry/index.html) in a [Strimzi](https://strimzi.io)-based [Kafka](https://kafka.apache.org/) cluster that's optionally secured with TLS.
