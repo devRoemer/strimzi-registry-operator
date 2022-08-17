@@ -13,7 +13,14 @@ from ..deployments import (
     create_service,
     get_kafka_bootstrap_server,
 )
-from ..k8s import create_k8sclient, get_deployment, get_secret, get_service
+from ..k8s import (
+    create_k8sclient,
+    get_deployment,
+    get_kafka_user,
+    get_secret,
+    get_service,
+)
+from ..strimzi import get_api_version, get_listener
 
 
 @kopf.on.create("roundtable.lsst.codes", "v1beta1", "strimzischemaregistries")
@@ -46,34 +53,9 @@ def create_registry(spec, meta, namespace, name, uid, logger, body, **kwargs):
     k8s_core_v1_api = k8s_client.CoreV1Api()
 
     # Get configurations from StrimziSchemaRegistry
-    try:
-        strimzi_api_version = spec["strimziVersion"]
-    except KeyError:
-        try:
-            strimzi_api_version = spec["strimzi-version"]
-            logger.warning(
-                "The strimzi-version configuration is deprecated. "
-                "Use strimziVersion instead."
-            )
-        except KeyError:
-            strimzi_api_version = "v1beta2"
-            logger.warning(
-                "StrimziSchemaRegistry %s is missing a strimziVersion, "
-                "using default %s",
-                name,
-                strimzi_api_version,
-            )
+    strimzi_api_version = get_api_version(name, spec, logger)
 
-    try:
-        listener_name = spec["listener"]
-    except KeyError:
-        listener_name = "tls"
-        logger.warning(
-            "StrimziSchemaRegistry %s is missing a listener name, "
-            "using default %s",
-            name,
-            listener_name,
-        )
+    listener_name = get_listener(name, spec, logger)
 
     service_type = spec.get("serviceType", "ClusterIP")
 
@@ -110,14 +92,16 @@ def create_registry(spec, meta, namespace, name, uid, logger, body, **kwargs):
     # Get the name of the Kafka cluster associated with the
     # StrimziSchemaRegistry's associated strimzi KafkaUser resource.
     # The StrimziSchemaRegistry and its KafkaUser have the same name.
-    kafkauser = k8s_cr_api.get_namespaced_custom_object(
-        group="kafka.strimzi.io",
-        version=strimzi_api_version,
+    kafkauser = get_kafka_user(
         namespace=namespace,
-        plural="kafkausers",
         name=name,  # assume StrimziSchemaRegistry name matches
+        k8s_client=k8s_client,
+        strimzi_api_version=strimzi_api_version,
+        raw=False,
     )
+
     cluster_name = kafkauser["metadata"]["labels"]["strimzi.io/cluster"]
+    kafka_user_secret_name = kafkauser["status"]["secret"]
 
     # Get the Kafka bootstrap server corresponding to the configured
     # Kafka listener name.
@@ -134,7 +118,7 @@ def create_registry(spec, meta, namespace, name, uid, logger, body, **kwargs):
 
     # Create the JKS-formatted truststore/keystore secrets
     secret = create_secret(
-        kafka_username=name,  # assume the StrimziSchemaRegistry name matches
+        kafka_user_secret_name=kafka_user_secret_name,
         namespace=namespace,
         cluster=cluster_name,
         owner=body,

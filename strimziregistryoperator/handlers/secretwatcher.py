@@ -13,7 +13,8 @@ import kopf
 from .. import state
 from ..certprocessor import create_secret
 from ..deployments import update_deployment
-from ..k8s import create_k8sclient, get_deployment, get_ssr
+from ..k8s import create_k8sclient, get_deployment, get_kafka_user, get_ssr
+from ..strimzi import get_api_version
 
 
 @kopf.on.event("", "v1", "secrets")
@@ -59,8 +60,21 @@ def refresh_with_new_cluster_ca(*, cluster_ca_secret, namespace, logger):
             name=registry_name, namespace=namespace, k8s_client=k8s_client
         )
 
+        ssr_spec = ssr_body["spec"]
+        strimzi_api_version = get_api_version(registry_name, ssr_spec, logger)
+
+        kafkauser = get_kafka_user(
+            namespace=namespace,
+            name=registry_name,  # assume StrimziSchemaRegistry name matches
+            k8s_client=k8s_client,
+            strimzi_api_version=strimzi_api_version,
+            raw=False,
+        )
+
+        kafka_user_secret_name = kafkauser["status"]["secret"]
+
         secret = create_secret(
-            kafka_username=registry_name,
+            kafka_user_secret_name=kafka_user_secret_name,
             namespace=namespace,
             cluster=cluster,
             owner=ssr_body,
@@ -96,8 +110,21 @@ def refresh_with_new_client_secret(*, kafkauser_secret, namespace, logger):
         name=kafka_username, namespace=namespace, k8s_client=k8s_client
     )
 
+    ssr_spec = ssr_body["spec"]
+    strimzi_api_version = get_api_version(kafka_username, ssr_spec)
+
+    kafkauser = get_kafka_user(
+        namespace=namespace,
+        name=kafka_username,  # assume StrimziSchemaRegistry name matches
+        k8s_client=k8s_client,
+        strimzi_api_version=strimzi_api_version,
+        raw=False,
+    )
+
+    kafka_user_secret_name = kafkauser["status"]["secret"]
+
     secret = create_secret(
-        kafka_username=kafka_username,
+        kafka_user_secret_name=kafka_user_secret_name,
         namespace=namespace,
         cluster=cluster,
         owner=ssr_body,

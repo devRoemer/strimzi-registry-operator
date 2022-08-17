@@ -19,7 +19,7 @@ from .k8s import get_secret
 
 def create_secret(
     *,
-    kafka_username,
+    kafka_user_secret_name,
     namespace,
     cluster,
     owner,
@@ -33,8 +33,8 @@ def create_secret(
 
     Parameters
     ----------
-    kafka_username : `str`
-        Name of the associated KafkaUser.
+    kafka_user_secret_name : `str`
+        Name of the secret associated with the KafkaUser.
     namespace : `str`
         The name of the Kubernetes namespace where the Strimzi Kafka cluster
         operates.
@@ -74,7 +74,9 @@ def create_secret(
 
     if client_secret is None:
         client_secret = get_secret(
-            namespace=namespace, name=kafka_username, k8s_client=k8s_client
+            namespace=namespace,
+            name=kafka_user_secret_name,
+            k8s_client=k8s_client,
         )
         logger.info("Retrieved cluster CA certificate")
     client_secret_version = client_secret["metadata"]["resourceVersion"]
@@ -83,7 +85,7 @@ def create_secret(
     client_cert = decode_secret_field(client_secret["data"]["user.crt"])
     client_key = decode_secret_field(client_secret["data"]["user.key"])
 
-    jks_secret_name = f"{kafka_username}-jks"
+    jks_secret_name = f"{kafka_user_secret_name}-jks"
     try:
         jks_secret = get_secret(
             namespace=namespace, name=jks_secret_name, k8s_client=k8s_client

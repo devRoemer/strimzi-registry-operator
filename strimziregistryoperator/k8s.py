@@ -1,4 +1,10 @@
-__all__ = ("create_k8sclient", "get_deployment", "get_service", "get_secret")
+__all__ = (
+    "create_k8sclient",
+    "get_deployment",
+    "get_service",
+    "get_secret",
+    "get_kafka_user",
+)
 
 import json
 
@@ -49,6 +55,45 @@ def get_deployment(*, name, namespace, k8s_client, raw=True):
     api = k8s_client.AppsV1Api()
     result = api.read_namespaced_deployment(
         name=name, namespace=namespace, _preload_content=preload_content
+    )
+    if raw:
+        return json.loads(result.data)
+    else:
+        return result
+
+
+def get_kafka_user(
+    *, namespace, name, k8s_client, strimzi_api_version, raw=True
+):
+    """Get a kafka user resource.
+
+    Parameters
+    ----------
+    namespace : `str`
+        The Kubernetes namespace where the Strimzi Kafka cluster operates.
+    name : `str`
+        The name of the StrimziSchemaRegistry.
+    k8s_client
+        A Kubernetes client (see `create_k8sclient`).
+    strimzi_api_version : `str`
+        The strimzi api version
+    raw : `bool`
+        If `True`, the raw Kubernetes manifest is returned as a `dict`.
+        Otherwise the Python object representation of the resource is returned.
+
+    Returns
+    -------
+    kafka_user
+        The Kubernetes KafkaUser resource either as a `dict` or an
+        object.
+    """
+    api = k8s_client.CustomObjectsApi()
+    result = api.get_namespaced_custom_object(
+        group="kafka.strimzi.io",
+        version=strimzi_api_version,
+        namespace=namespace,
+        plural="kafkausers",
+        name=name,
     )
     if raw:
         return json.loads(result.data)
