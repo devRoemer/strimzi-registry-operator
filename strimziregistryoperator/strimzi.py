@@ -16,10 +16,10 @@ def get_api_version(registry_name, spec, logger):
         The version string of the strimzi api
     """
     try:
-        strimzi_api_version = spec["strimziVersion"]
+        return spec["strimziVersion"]
     except KeyError:
         try:
-            strimzi_api_version = spec["strimzi-version"]
+            return spec["strimzi-version"]
             logger.warning(
                 "The strimzi-version configuration is deprecated. "
                 "Use strimziVersion instead."
@@ -32,6 +32,7 @@ def get_api_version(registry_name, spec, logger):
                 registry_name,
                 strimzi_api_version,
             )
+            return strimzi_api_version
 
 
 def get_listener(registry_name, spec, logger):
@@ -49,7 +50,7 @@ def get_listener(registry_name, spec, logger):
         The listener name
     """
     try:
-        listener_name = spec["listener"]
+        return spec["listener"]
     except KeyError:
         listener_name = "tls"
         logger.warning(
@@ -58,3 +59,4 @@ def get_listener(registry_name, spec, logger):
             registry_name,
             listener_name,
         )
+        return listener_name

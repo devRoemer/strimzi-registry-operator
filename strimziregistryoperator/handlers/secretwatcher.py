@@ -61,7 +61,9 @@ def refresh_with_new_cluster_ca(*, cluster_ca_secret, namespace, logger):
         )
 
         ssr_spec = ssr_body["spec"]
-        strimzi_api_version = get_api_version(registry_name, ssr_spec, logger)
+        strimzi_api_version = get_api_version(
+            registry_name=registry_name, spec=ssr_spec, logger=logger
+        )
 
         kafkauser = get_kafka_user(
             namespace=namespace,
@@ -111,7 +113,9 @@ def refresh_with_new_client_secret(*, kafkauser_secret, namespace, logger):
     )
 
     ssr_spec = ssr_body["spec"]
-    strimzi_api_version = get_api_version(kafka_username, ssr_spec)
+    strimzi_api_version = get_api_version(
+        registry_name=kafka_username, spec=ssr_spec, logger=logger
+    )
 
     kafkauser = get_kafka_user(
         namespace=namespace,

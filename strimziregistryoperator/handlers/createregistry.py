@@ -53,9 +53,13 @@ def create_registry(spec, meta, namespace, name, uid, logger, body, **kwargs):
     k8s_core_v1_api = k8s_client.CoreV1Api()
 
     # Get configurations from StrimziSchemaRegistry
-    strimzi_api_version = get_api_version(name, spec, logger)
+    strimzi_api_version = get_api_version(
+        registry_name=name, spec=spec, logger=logger
+    )
 
-    listener_name = get_listener(name, spec, logger)
+    listener_name = get_listener(
+        registry_name=name, spec=spec, logger=logger
+    )
 
     service_type = spec.get("serviceType", "ClusterIP")
 
